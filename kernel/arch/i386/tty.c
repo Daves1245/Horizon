@@ -71,6 +71,20 @@ void terminal_write(const char* data, size_t size) {
 		terminal_putchar(data[i]);
 }
 
+void terminal_write_dec(u32int n) {
+    // 10 digits to cover unsigned 2^32 bits
+    int tmp[10] = {0};
+    int i = 0;
+
+    do {
+        tmp[i++] = n % 10;
+        n /= 10;
+    } while (n);
+    do {
+        terminal_putchar(tmp[--i]);
+    } while (i);
+}
+
 void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }

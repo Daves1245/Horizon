@@ -1,3 +1,5 @@
+#include <string.h>
+
 void itoa(char *dest, int num) {
     memset(dest, 0, sizeof dest);
     char stack[12] = {0};
