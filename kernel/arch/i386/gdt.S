@@ -12,3 +12,9 @@ gdt_flush:
     jmp 0x08:.flush     ; 0x08 is th eoffset to our code segment: Far jump!
 .flush:
     ret
+
+[GLOBAL idt_flush]      ; Let C call idt_flush()
+idt_flush:
+    mov eax, [esp + 4]
+    lidt [eax]
+    ret

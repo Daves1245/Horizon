@@ -22,5 +22,8 @@ void kernel_main(void) {
     quick_sort(arr, n);
     printf("Sorted array: ");
     print(arr, n);
+
+//    asm volatile ("int $0x3");
+//    asm volatile ("int $0x4");
     return;
 }
