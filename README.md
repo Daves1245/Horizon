@@ -1,5 +1,5 @@
 ## Usage
-A cross-compiler is needed to build to the i686 architectur. Follow the instructions at OSDevWiki to [build a cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler)
+A cross-compiler is needed to build to the i686 architecture. Follow the instructions at OSDevWiki to [build a cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler)
 
 Build:
 ```bash
