@@ -2,7 +2,7 @@ DEFAULT_HOST!=../default-host.sh
 HOST?=DEFAULT_HOST
 HOSTARCH!=../target-triplet-to-arch.sh $(HOST)
 
-CFLAGS?=-O2 -g
+CFLAGS?=-O2 -g -v
 CPPFLAGS?=
 LDFLAGS?=
 LIBS?=
@@ -53,6 +53,7 @@ $(ARCHDIR)/crtn.o \
 all: myos.kernel
 
 myos.kernel: $(OBJS) $(ARCHDIR)/linker.ld
+	echo $(CC)
 	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
 	grub-file --is-x86-multiboot myos.kernel
 

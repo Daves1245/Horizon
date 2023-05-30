@@ -1,47 +1,45 @@
-; x86 assumes unqiue handlers for each of the 32 interrupts. for that reason,
-; no additional information is given when a handler is called. this
-; tutorial takes the approach of creating a single handler, by standardizing
-; stack frames for all handlers (the only difference is some [8, 10-14] interrupts include error codes)
-; personally, this seems like a terribly hacky approach with a lot of room
-; for bugs (several other lines of code have also been suspect), but will
-; work for now until everything is functional and we can go back for cleanup
+// This macro creates a stub for an ISR which does NOT pass its own
+// error code (adds a dummy errcode byte).
+// TODO pushb was changed to push. although the values
+// fit in a byte, not entirely sure if assembly treats it as a byte.
+// this will most likely cause issues in the near future.
+.macro ISR_NOERRCODE num
+    .globl isr\num
+    isr\num:
+        cli                             # Disable interrupts firstly.
+        push $0                        # Push a dummy error code.
+        push $\num                     # Push the interrupt number.
+        jmp isr_common_stub             # Go to our common handler code.
+.endm
 
-%macro ISR_NOERRCODE 1 ; takes 1 parameter
-; use '%n' to access n'th parameter
-    [GLOBAL isr%1] ; ok, this macro feature is p cool
-    isr%1:
-        cli
-        push bye 0 ; push dummy value if it doesn't push its own
-        push byte %1 ; push the interrupt number
-        jmp isr_common_stub ; go to common handler
-%endmacro
-
-%macro ISR_ERRCODE 1
-    [GLOBAL isr%1]
-    isr%1:
-        cli
-        push byte %1
+// This macro creates a stub for an ISR which passes its own
+// error code.
+.macro ISR_ERRCODE num
+    .globl isr\num
+    isr\num:
+        cli                             # Disable interrupts.
+        push $\num                     # Push the interrupt number
         jmp isr_common_stub
-%endmacro
+.endm
 
-ISR_NOERRCODE 0   ; 0
-ISR_NOERRCODE 1   ; 1
-ISR_NOERRCODE 2   ; 2
-ISR_NOERRCODE 3   ; 3
-ISR_NOERRCODE 4   ; 4
-ISR_NOERRCODE 5   ; 5
-ISR_NOERRCODE 6   ; 6
-ISR_NOERRCODE 7   ; 7
-ISR_ERRCODE 8   ; 8
-ISR_NOERRCODE 9   ; 9
-ISR_ERRCODE 10  ; 10
-ISR_ERRCODE 11  ; 11
-ISR_ERRCODE 12  ; 12
-ISR_ERRCODE 13  ; 13
-ISR_ERRCODE 14  ; 14
-ISR_NOERRCODE 05  ; 15
-ISR_NOERRCODE 06  ; 16
-ISR_NOERRCODE 07  ; 17
+ISR_NOERRCODE 0
+ISR_NOERRCODE 1
+ISR_NOERRCODE 2
+ISR_NOERRCODE 3
+ISR_NOERRCODE 4
+ISR_NOERRCODE 5
+ISR_NOERRCODE 6
+ISR_NOERRCODE 7
+ISR_ERRCODE   8
+ISR_NOERRCODE 9
+ISR_ERRCODE   10
+ISR_ERRCODE   11
+ISR_ERRCODE   12
+ISR_ERRCODE   13
+ISR_ERRCODE   14
+ISR_NOERRCODE 15
+ISR_NOERRCODE 16
+ISR_NOERRCODE 17
 ISR_NOERRCODE 18
 ISR_NOERRCODE 19
 ISR_NOERRCODE 20
@@ -56,33 +54,36 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
+ 
+# In isr.c
+.extern isr_handler
 
-[EXTERN isr_handler]
+# This is our common ISR stub. It saves the processor state, sets
+# up for kernel mode segments, calls the C-level fault handler,
+# and finally restores the stack frame.
+.globl isr_common_stub
 
-; This is our common isr stub. it saves the processor state, sets
-; up for kernel mode segments, calls C-level fault handler,
-; and finally restores the stack frame.
 isr_common_stub:
-    pusha               ; pushes edi, esi, ebp, esp, ebx, edx, ecx, eax
+    pusha                           # Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 
-    mov ax, ds          ; lower 16 bits eax = ds
-    push eax            ; save the data segment descriptor
+    movw %ds, %ax                   # Lower 16-bits of eax = ds.
+    pushl %eax                      # save the data segment descriptor
 
-    mov ax, 0x10        ; load the kernel data segment descriptor
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
+    movw $0x10, %ax                 # load the kernel data segment descriptor
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
 
     call isr_handler
 
-    pop ebx             ; reload the original data segment descriptor
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
+    popl %ebx                       # reload the original data segment descriptor
+    movw %bx, %ds
+    movw %bx, %es
+    movw %bx, %fs
+    movw %bx, %gs
 
-    popa                ; pops edi, esi, ebp...
-    add esp, 8          ; cleans pushed error code and pushed isr number
+    popa                            # Pops edi,esi,ebp...
+    addl $8, %esp                   # Cleans up the pushed error code and pushed ISR number
     sti
-    iret                ; pops cs, eip, eflags, ss, and esp
+    iret                            # pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP

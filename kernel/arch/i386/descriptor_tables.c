@@ -1,69 +1,91 @@
-// initialises the GDT and IDT, and defines the 
-// default IRS and IRQ handler.
-// Based on code from Bran's kernel development tutorials
-// Rewritten for JamesM's kernel development tutorials
+//
+// descriptor_tables.c - Initialises the GDT and IDT, and defines the 
+//                       default ISR and IRQ handler.
+//                       Based on code from Bran's kernel development tutorials.
+//                       Rewritten for JamesM's kernel development tutorials.
+//
+
+#include <string.h>
 
 #include "common.h"
 #include "descriptor_tables.h"
 
-// access asm functions from C (???? used redundant extern?)
-void gdt_flush(u32int);
+// Lets us access our ASM functions from our C code.
+extern void gdt_flush(u32int);
+extern void idt_flush(u32int);
 
-// internal functions (??)
+// Internal function prototypes.
 static void init_gdt();
-static void gdt_set_gate(s32int, u32int, u32int, u8int, u8int);
+static void init_idt();
+static void gdt_set_gate(s32int,u32int,u32int,u8int,u8int);
+static void idt_set_gate(u8int,u32int,u16int,u8int);
 
 struct gdt_entry gdt_entries[5];
-struct gdt_ptr gdt_ptr;
+struct gdt_ptr   gdt_ptr;
 struct idt_entry idt_entries[256];
-struct idt_ptr idt_ptr;
+struct idt_ptr   idt_ptr;
 
-void init_descriptor_tables() {
+// Initialisation routine - zeroes all the interrupt service routines,
+// initialises the GDT and IDT.
+void init_descriptor_tables()
+{
+
+    // Initialise the global descriptor table.
     init_gdt();
+    // Initialise the interrupt descriptor table.
+    init_idt();
+
 }
 
-static void init_gdt() {
-    gdt_ptr.limit = sizeof(struct gdt_entry) * 5 - 1;
-    gdt_ptr.base = (u32int) &gdt_entries;
+static void init_gdt()
+{
+    gdt_ptr.limit = (sizeof(struct gdt_entry) * 5) - 1;
+    gdt_ptr.base  = (u32int)&gdt_entries;
 
-    #define HIGH 0xFFFFFFFF
+    gdt_set_gate(0, 0, 0, 0, 0);                // Null segment
+    gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // Code segment
+    gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF); // Data segment
+    gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // User mode code segment
+    gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // User mode data segment
 
-    gdt_set_gate(0, 0, 0, 0, 0); // null segment
-    gdt_set_gate(1, 0, HIGH, 0x9A, 0xCF); // code segment
-    gdt_set_gate(2, 0, HIGH, 0x92, 0xCF); // data segment
-    gdt_set_gate(3, 0, HIGH, 0xFA, 0xCF); // user mode code segment
-    gdt_set_gate(4, 0, HIGH, 0xF2, 0xCF); // user mode data segment
-
-    gdt_flush((u32int) &gdt_ptr);
+    gdt_flush((u32int)&gdt_ptr);
 }
 
-// set the value of one gdt entry
-static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int limit, u8int access, u8int gran) {
-    gdt_entries[num].base_low = base & 0xFFFF;
+// Set the value of one GDT entry.
+static void gdt_set_gate(s32int num, u32int base, u32int limit, u8int access, u8int gran)
+{
+    gdt_entries[num].base_low    = (base & 0xFFFF);
     gdt_entries[num].base_middle = (base >> 16) & 0xFF;
-    gdt_entries[num].base_high = (base >> 24) & 0xFF;
+    gdt_entries[num].base_high   = (base >> 24) & 0xFF;
 
-    gdt_entries[num].limit_low = limit & 0xFFFF;
+    gdt_entries[num].limit_low   = (limit & 0xFFFF);
     gdt_entries[num].granularity = (limit >> 16) & 0x0F;
+    
     gdt_entries[num].granularity |= gran & 0xF0;
-    gdt_entries[num].access = access;
+    gdt_entries[num].access      = access;
+}
+
+static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
+{
+    idt_entries[num].base_lo = base & 0xFFFF;
+    idt_entries[num].base_hi = (base >> 16) & 0xFFFF;
+
+    idt_entries[num].sel     = sel;
+    idt_entries[num].always0 = 0;
+    // We must uncomment the OR below when we get to using user-mode.
+    // It sets the interrupt gate's privilege level to 3.
+    idt_entries[num].flags   = flags /* | 0x60 */;
 }
 
 void idt_flush(u32int);
 
-static void init_idt();
 static void idt_set_gate(u8int, u32int, u16int, u8int);
 
 struct idt_entry idt_entries[256];
 struct idt_ptr idt_ptr;
 
-void init_descriptor_tables() {
-    init_gdt();
-    init_idt();
-}
-
 static void init_idt() {
-    idt_ptr.limit = sizeof(struct idt_netry) * 256 - 1;
+    idt_ptr.limit = sizeof(struct idt_entry) * 256 - 1;
     idt_ptr.base = (u32int) &idt_entries;
 
     memset(&idt_entries, 0, sizeof(struct idt_entry) * 256);
@@ -101,16 +123,4 @@ static void init_idt() {
     idt_set_gate(31, (u32int) isr31, 0x08, 0x8E);
 
     idt_flush((u32int) &idt_ptr);
-}
-
-static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags) {
-    struct idt_entry *entry = idt_entries[num];
-    entry.base_lo = base & 0xFFFF;
-    entry.base_hi = (base >> 16) & 0xFFFF;
-    entry.sel = sel;
-    entry.always0 = 0;
-
-    // uncomment the OR below when we get to use user-mode. It
-    // sets the int gate's priv level to 3 (currently ring level 0)
-    entry.flags = flags; /* | 0x60; */
 }

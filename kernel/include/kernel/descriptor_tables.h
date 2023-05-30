@@ -16,23 +16,21 @@ struct gdt_ptr {
     u32int base; // address of first gdt_entry struct
 } __attribute__((packed));
 
-// describes an interrupt gate
 struct idt_entry {
-    u16int base_lo;         // lower 16 bits of the addr to jmp to when int is fired.
-    u16int sel;             // kernel segment selector
-    u8int always0;          // must always be zero
-    u8int flags;            // more flags. see manual documentation
-    u16int base_hi;        
-} __attribute__((packed));
-
-// pointer to array of interrupt (int) handlers
-// in format suitable for giving to 'lidt' x86 instruction
-struct idt_ptr {
-    u16int limit;
-    u32int base;            // addr of first element in idt_entry array
+    u16int base_lo;     // lower 16 bits to jmp to when int fires
+    u16int sel; // kernel segment selector
+    u8int zero; // always zero
+    u8int flags; // more flags. see documentation
+    u16int base_hi; // upper 16 bits of address to jump to
 } __attribute((packed));
 
-// for access to addresses of asm irs handlers
+struct idt_ptr {
+    u16int limit;
+    u32int base;
+} __attribute((packed));
+
+void init_descriptor_tables();
+
 void isr0();
 void isr1();
 void isr2();
@@ -65,3 +63,4 @@ void isr28();
 void isr29();
 void isr30();
 void isr31();
+
