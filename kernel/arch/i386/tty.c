@@ -42,8 +42,14 @@ void terminal_scroll() {
     for (size_t r = 0; r < VGA_HEIGHT - 1; r++) {
         for (size_t c = 0; c < VGA_WIDTH; c++) {
             terminal_buffer[r * VGA_WIDTH + c] =
-                terminal_buffer[(r - 1) * VGA_WIDTH + c];
+                terminal_buffer[(r + 1) * VGA_WIDTH + c];
         }
+    }
+}
+
+void terminal_scrolln(int rows) {
+    for (int i = 0; i < rows; i++) {
+        terminal_scroll();
     }
 }
 

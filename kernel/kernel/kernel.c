@@ -27,6 +27,8 @@ void kernel_main(void) {
     printf("Sorted array: ");
     print(arr, n);
 
+    terminal_scroll();
+
     asm volatile("int $0x3"); 
     asm volatile("int $0x4"); 
 

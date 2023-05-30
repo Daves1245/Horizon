@@ -9,9 +9,13 @@
 #include "isr.h"
 #include <kernel/tty.h>
 
+#include <stdio.h>
+
 // This gets called from our ASM interrupt handler stub.
 void isr_handler(struct registers regs) {
     terminal_writestring("received interrupt: ");
+    printf("int_no: %d err_code: %d", regs.int_no, regs.err_code);
+    terminal_scroll();
     terminal_write_dec(regs.int_no);
     terminal_putchar('\n');
 }
