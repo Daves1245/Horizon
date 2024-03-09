@@ -18,8 +18,8 @@ void kernel_main(void) {
 
     int n = 10;
     int arr[n];
-    for (int i = 0; i < 10; i++) {
-        arr[i] = 10 - i;
+    for (int i = 0; i < n; i++) {
+        arr[i] = n - i;
     }
     printf("Unsorted array: ");
     print(arr, n);
@@ -29,8 +29,8 @@ void kernel_main(void) {
 
     terminal_scroll();
 
-    asm volatile("int $0x3"); 
-    asm volatile("int $0x4"); 
+    asm volatile("int $0xB"); 
+    // asm volatile("int $0x4"); 
 
     return;
 }
