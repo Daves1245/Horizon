@@ -7,8 +7,7 @@ export TARGET=i686-elf
 NUM_CORES=14
 INSTALL_DIRECTORY="$(pwd)"
 
-# Function to download, parse, and extract a tar.gz file for binutils
-download_and_extract_binutils() {
+download_binutils() {
     local site=$1
     local output_file=$2
 
@@ -20,7 +19,7 @@ download_and_extract_binutils() {
 
     readarray -t options < $output_file
 
-    # Generate menu
+    # TODO add link to TheBashMenu
     source bmenu -t "Available binutils versions" -s "[select one]" -o "$(cat $output_file)" -a #Delete the # before "-a" to display the alternative menu.
 
     option=${options[$selected - 1]}
@@ -36,8 +35,7 @@ download_and_extract_binutils() {
     tar xvf binutils.tar.gz
 }
 
-# Function to download, parse, and extract a tar.gz file for gcc
-download_and_extract_gcc() {
+download_gcc() {
     local site=$1
     local output_file=$2
 
@@ -49,7 +47,7 @@ download_and_extract_gcc() {
 
     readarray -t options < $output_file
 
-    # Generate menu
+    # TODO add link to TheBashMenu
     source bmenu -t "Available gcc versions" -s "[select one]" -o "$(cat $output_file)" -a #Delete the # before "-a" to display the alternative menu.
 
     option=${options[$selected - 1]}
@@ -66,9 +64,8 @@ download_and_extract_gcc() {
     tar xvf gcc.tar.gz
 }
 
-# Function to install binutils
 install_binutils() {
-    download_and_extract_binutils $BINUTILS_SITE binutils_options.txt
+    download_binutils $BINUTILS_SITE binutils_options.txt
 
     mkdir -p build-binutils
     cd build-binutils
@@ -79,9 +76,8 @@ install_binutils() {
     cd ..
 }
 
-# Function to install gcc
 install_gcc() {
-    download_and_extract_gcc $GCC_SITE gcc_options.txt
+    download_gcc $GCC_SITE gcc_options.txt
 
     which -- $TARGET-as || echo $TARGET-as is not in the PATH
 
@@ -97,8 +93,8 @@ install_gcc() {
     cd ..
 }
 
-# Main script execution
 install_binutils
+# TODO doesn't seem to work on zsh, haven't test bash and/or find new way to pause. read -p should be fine for "press enter"
 read -n 1 -s -r -p "Installed binutils. Press any key to continue"
 install_gcc
 echo "Installed gcc"
